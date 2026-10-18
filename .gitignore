@@ -11,6 +11,6 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 
-# Modelos entrenados (se regeneran con scripts/train.py)
+# Modelos entrenados (se regeneran con scripts/entrenar.py)
 models/*
 !models/.gitkeep

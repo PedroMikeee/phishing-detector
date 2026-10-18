@@ -1,0 +1,87 @@
+{
+  "configuracion": {
+    "calibrado": false,
+    "max_caracteristicas": 20000,
+    "ngram_min": 1,
+    "ngram_max": 2,
+    "min_df": 2,
+    "stopwords_ingles": true,
+    "alpha": 0.5,
+    "proporcion_prueba": 0.2,
+    "semilla": 42
+  },
+  "datos": {
+    "filas_originales": 82486,
+    "sin_etiqueta": 0,
+    "texto_vacio": 1,
+    "etiqueta_contradictoria": 0,
+    "duplicados_eliminados": 408,
+    "filas_finales": 82077,
+    "legitimos": 39233,
+    "maliciosos": 42844
+  },
+  "prueba": {
+    "n": 16416,
+    "exactitud": 0.9642422027290448,
+    "precision": 0.989093137254902,
+    "sensibilidad": 0.9418835336678726,
+    "f1": 0.9649112319923486,
+    "auc_roc": 0.9969193620618914,
+    "mse_probabilidad": 0.027092172588551403,
+    "r2_probabilidad": 0.8914212781461521,
+    "matriz_confusion": {
+      "tn": 7758,
+      "fp": 89,
+      "fn": 498,
+      "tp": 8071
+    },
+    "niveles_riesgo_pct": {
+      "legitimo": {
+        "bajo": 98.27,
+        "medio": 0.98,
+        "alto": 0.75
+      },
+      "malicioso": {
+        "bajo": 3.65,
+        "medio": 7.12,
+        "alto": 89.23
+      }
+    }
+  },
+  "terminos": {
+    "malicioso": [
+      "custom alert",
+      "replica watches",
+      "replica classics",
+      "alerts custom",
+      "httpwwwcnncomvideopartnersemailindexhtmlurlvideocrime",
+      "httpwwwcnncom crime",
+      "numtoken cnncom",
+      "lp lllp",
+      "lllp",
+      "network lp",
+      "httpwwwcnncomvideopartnersemailindexhtmlurlvideous",
+      "watches",
+      "replica",
+      "watches replica",
+      "rolex"
+    ],
+    "legitimo": [
+      "enron",
+      "hou ect",
+      "ect ect",
+      "pythondev",
+      "opensuse",
+      "tangomucom",
+      "enron com",
+      "kaminski",
+      "numtoken opensuse",
+      "vince kaminski",
+      "ect cc",
+      "numtoken pythondev",
+      "cc subject",
+      "pythondev mailing",
+      "_______________________________________________ pythondev"
+    ]
+  }
+}

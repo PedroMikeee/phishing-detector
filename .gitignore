@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Datos pesados: no se suben al repositorio
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Modelos entrenados (se regeneran con scripts/train.py)
+models/*
+!models/.gitkeep

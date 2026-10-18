@@ -1,0 +1,41 @@
+Datos: 82,077 correos limpios -> 65,661 entrenamiento / 16,416 prueba
+Preprocesando y ajustando TF-IDF (puede tardar un par de minutos)...
+Vocabulario: 20,000 términos (72 s)
+
+=== Conjunto de prueba (20 %) (n = 16,416) ===
+  exactitud    0.9642
+  precisión    0.9891   (de lo que marca malicioso, cuánto lo es)
+  sensibilidad 0.9419   (de lo malicioso, cuánto detecta)
+  F1           0.9649
+  AUC-ROC      0.9969
+  MSE (prob.)  0.0271   (puntaje de Brier; 0 es lo ideal)
+  R² (prob.)   0.8914   (1 es lo ideal; negativo = peor que la media)
+  matriz: VN 7,758  FP 89  FN 498  VP 8,071
+  reparto por nivel de riesgo (% de cada clase real):
+     legitimo: bajo  98.27%  medio   0.98%  alto   0.75%
+    malicioso: bajo   3.65%  medio   7.12%  alto  89.23%
+
+Términos que más inclinan hacia MALICIOSO:
+  custom alert, replica watches, replica classics, alerts custom, httpwwwcnncomvideopartnersemailindexhtmlurlvideocrime, httpwwwcnncom crime, numtoken cnncom, lp lllp, lllp, network lp, httpwwwcnncomvideopartnersemailindexhtmlurlvideous, watches, replica, watches replica, rolex
+Términos que más inclinan hacia LEGÍTIMO:
+  enron, hou ect, ect ect, pythondev, opensuse, tangomucom, enron com, kaminski, numtoken opensuse, vince kaminski, ect cc, numtoken pythondev, cc subject, pythondev mailing, _______________________________________________ pythondev
+(Revísalos: si ves fechas, nombres o rasgos de formato, el modelo aprende la fuente, no el contenido.)
+
+=== Validación externa: Phishing_validation_emails.csv (n = 100) ===
+  exactitud    0.7900
+  precisión    0.5250   (de lo que marca malicioso, cuánto lo es)
+  sensibilidad 0.9130   (de lo malicioso, cuánto detecta)
+  F1           0.6667
+  AUC-ROC      0.9193
+  MSE (prob.)  0.1319   (puntaje de Brier; 0 es lo ideal)
+  R² (prob.)   0.2551   (1 es lo ideal; negativo = peor que la media)
+  matriz: VN 58  FP 19  FN 2  VP 21
+  reparto por nivel de riesgo (% de cada clase real):
+     legitimo: bajo  68.83%  medio  18.18%  alto  12.99%
+    malicioso: bajo    8.7%  medio    8.7%  alto  82.61%
+
+Modelo guardado en /home/tash/Universidad/MSInfo/Anteproyecto/Proyecto/phishing-detector/models/modelo_phishing.joblib
+Figuras en /home/tash/Universidad/MSInfo/Anteproyecto/Proyecto/phishing-detector/docs/figuras
+Métricas en /home/tash/Universidad/MSInfo/Anteproyecto/Proyecto/phishing-detector/docs/resultados
+Tiempo total: 74 s
+

@@ -83,5 +83,33 @@
       "pythondev mailing",
       "_______________________________________________ pythondev"
     ]
+  },
+  "externa": {
+    "n": 100,
+    "exactitud": 0.79,
+    "precision": 0.525,
+    "sensibilidad": 0.9130434782608695,
+    "f1": 0.6666666666666666,
+    "auc_roc": 0.9192546583850931,
+    "mse_probabilidad": 0.13192682244386783,
+    "r2_probabilidad": 0.25507158416788356,
+    "matriz_confusion": {
+      "tn": 58,
+      "fp": 19,
+      "fn": 2,
+      "tp": 21
+    },
+    "niveles_riesgo_pct": {
+      "legitimo": {
+        "bajo": 68.83,
+        "medio": 18.18,
+        "alto": 12.99
+      },
+      "malicioso": {
+        "bajo": 8.7,
+        "medio": 8.7,
+        "alto": 82.61
+      }
+    }
   }
 }

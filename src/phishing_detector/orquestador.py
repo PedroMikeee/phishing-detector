@@ -16,11 +16,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import joblib
+import numpy as np
 
 from . import idioma as _idioma
 from .alerta import ACCIONES, Alerta, ModuloAlerta, NivelRiesgo, nivel_maximo
 from .caracteristicas import ExtractorCaracteristicas
-from .config import RUTA_MODELO_ENTRENADO, ConfigOrquestador
+from .config import ETIQUETA_LEGITIMO, ETIQUETA_PHISHING, RUTA_MODELO_ENTRENADO, ConfigOrquestador
 from .correo import PATRON_URL, CorreoElectronico
 from .evaluacion import nivel_de_riesgo
 from .modelo import ModeloNaiveBayes
@@ -40,6 +41,7 @@ class AgenteOrquestador:
         self.umbral_riesgo = cfg.umbral_alto
         self.nivel_alerta: NivelRiesgo | None = None
         self._vocabulario: list[str] | None = None   # se calcula una vez (20 000 términos)
+        self.metricas: dict | None = None            # métricas del entrenamiento (si se cargó de archivo)
 
     @classmethod
     def desde_archivo(cls, ruta: Path = RUTA_MODELO_ENTRENADO,
@@ -49,7 +51,36 @@ class AgenteOrquestador:
         if not ruta.exists():
             raise FileNotFoundError(f"No hay modelo entrenado en {ruta}. Ejecuta: python scripts/entrenar.py")
         guardado = joblib.load(ruta)
-        return cls(guardado["extractor"], guardado["modelo"], cfg=cfg)
+        agente = cls(guardado["extractor"], guardado["modelo"], cfg=cfg)
+        agente.metricas = guardado.get("metricas")   # métricas del entrenamiento, para la interfaz
+        return agente
+
+    def guardar(self, ruta: Path = RUTA_MODELO_ENTRENADO) -> None:
+        """Guarda extractor, modelo y métricas en el mismo formato que `scripts/entrenar.py`."""
+        Path(ruta).parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump({"extractor": self.extractor, "modelo": self.modelo, "config": self.modelo.cfg,
+                     "metricas": self.metricas}, ruta)
+
+    # ------------------------------------------------------------------ actualización (D9)
+    def aprender(self, correos: list[CorreoElectronico | str], etiquetas: list[int],
+                 descartar_calibracion: bool = False) -> int:
+        """Incorpora correos nuevos etiquetados (0 = legítimo, 1 = malicioso) al modelo.
+
+        Devuelve cuántos ejemplos se incorporaron. Ver `ModeloNaiveBayes.actualizar`
+        para los límites (vocabulario fijo, calibrador).
+        """
+        if len(correos) != len(etiquetas):
+            raise ValueError("Debe haber una etiqueta por cada correo.")
+        if not correos:
+            return 0
+        if not set(etiquetas) <= {ETIQUETA_LEGITIMO, ETIQUETA_PHISHING}:
+            raise ValueError("Las etiquetas deben ser 0 (legítimo) o 1 (malicioso).")
+        textos = [c.obtener_contenido() if isinstance(c, CorreoElectronico) else str(c) for c in correos]
+        if any(not t.strip() for t in textos):
+            raise ValueError("Hay correos vacíos entre los ejemplos nuevos.")
+        X = self.extractor.vectorizar(textos)
+        self.modelo.actualizar(X, np.asarray(etiquetas, dtype=int), descartar_calibracion=descartar_calibracion)
+        return len(textos)
 
     # ------------------------------------------------------------------ flujo principal
     def recibir_correo(self, correo: CorreoElectronico | str) -> Alerta:

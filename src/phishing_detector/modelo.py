@@ -29,6 +29,7 @@ class ModeloNaiveBayes:
         self.cfg = cfg
         self.clases_entrenadas: list[int] = []
         self.probabilidades: dict = {}   # probabilidades a priori de cada clase
+        self.ejemplos_agregados: int = 0  # ejemplos incorporados con actualizar()
         self._clasificador: MultinomialNB | None = None
         self._calibrador: CalibratedClassifierCV | None = None
 
@@ -46,6 +47,33 @@ class ModeloNaiveBayes:
             cal = CalibratedClassifierCV(MultinomialNB(alpha=self.cfg.alpha), method="sigmoid", cv=5)
             cal.fit(X_entrenamiento, y_entrenamiento)
             self._calibrador = cal
+
+    def actualizar(self, X_nuevo, y_nuevo, descartar_calibracion: bool = False) -> None:
+        """Incorpora ejemplos nuevos ya etiquetados sin reentrenar desde cero (D9).
+
+        Cubre el "pueda actualizarse al alimentarlo con nuevos ejemplos" del
+        Objetivo 2 del anteproyecto. Naive Bayes guarda conteos por término y
+        clase, así que `partial_fit` los suma y recalcula las probabilidades.
+
+        Límites que hay que declarar:
+        - El vocabulario TF-IDF quedó fijo en el entrenamiento: las palabras
+          que no estaban en él se ignoran. Para ampliarlo hay que reentrenar
+          con `scripts/entrenar.py`.
+        - El calibrador sigmoide (si lo hay) se ajustó con los datos antiguos y
+          no se puede actualizar de forma incremental; hay que descartarlo
+          explícitamente (`descartar_calibracion=True`) o reentrenar.
+        """
+        clf = self._exigir_entrenado()
+        if self._calibrador is not None:
+            if not descartar_calibracion:
+                raise RuntimeError(
+                    "El modelo está calibrado y el calibrador no se actualiza de forma incremental. "
+                    "Usa descartar_calibracion=True o reentrena con scripts/entrenar.py --calibrar.")
+            self._calibrador = None
+        clf.partial_fit(X_nuevo, y_nuevo)
+        priors = np.exp(clf.class_log_prior_)
+        self.probabilidades = {int(c): float(p) for c, p in zip(clf.classes_, priors)}
+        self.ejemplos_agregados = getattr(self, "ejemplos_agregados", 0) + int(X_nuevo.shape[0])
 
     def _exigir_entrenado(self) -> MultinomialNB:
         if self._clasificador is None:

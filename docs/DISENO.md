@@ -21,6 +21,9 @@ Fuera del alcance (por ahora): integración con un cliente de correo real, anál
 | D4 | Explicar la alerta con los términos que más aportan a la decisión | Cierra la brecha de explicabilidad de la sección II.C sin librerías extra | SHAP/LIME: más pesado para un modelo que ya es lineal |
 | D5 | Umbrales de riesgo configurables en `config.py` | Se calibran con datos reales en evaluación | Umbrales fijos en el código |
 | D6 | Etiquetas internas 0 = legítimo, 1 = malicioso (spam/phishing); el cargador falla si encuentra una etiqueta desconocida | Evita entrenar con etiquetas mal interpretadas sin darse cuenta | Adivinar el mapeo |
+| D7 | Aviso de idioma (por implementar): si el correo no parece inglés, la alerta advierte que el resultado no es fiable | El modelo solo vio inglés; un pedido legítimo en español obtuvo P = 0,93 (riesgo alto) | Mostrar el nivel sin advertencia |
+| D8 | Reglas complementarias en el orquestador (por implementar): enlaces con dominio distinto al del remitente, lenguaje de urgencia y petición de contraseñas o códigos; pueden subir el nivel y se muestran como motivos | El modelo de palabras no ve remitente ni enlaces (el dataset vino sin URLs) y el Obj. 1 del anteproyecto los menciona; un phishing sin palabras típicas obtuvo P = 0,19 | Confiar solo en el modelo |
+| D9 | Reentrenamiento con ejemplos nuevos etiquetados (por implementar) | El Obj. 2 del anteproyecto pide que el modelo "pueda actualizarse al alimentarlo con nuevos ejemplos" | Modelo fijo entrenado una sola vez |
 
 ## 3. Dataset
 
@@ -29,7 +32,7 @@ Criterios: texto de correo etiquetado como phishing/legítimo, descarga gratuita
 | Opción | Qué sé (verificado) | Qué falta confirmar | Uso propuesto |
 |---|---|---|---|
 | **Kaggle: "Phishing Email Dataset"** (Alam, 2024) | Existe; otro estudio lo cita como fuente (MeAJOR, arXiv 2507.17978). En un trabajo de grado aparece como `Phishing_Email.csv` con columnas `Email Text` y `Email Type` | Número de filas, balance de clases, valores exactos de `Email Type`, licencia | **Principal** para entrenar y evaluar |
-| **Zenodo: "Phishing validation emails dataset"** (v1, 2024) | 2.000 correos, dos clases (Safe Email / Phishing Email), un CSV de 203 kB, licencia CC BY 4.0. <https://zenodo.org/records/13474746> | Balance de clases, nombres de columnas | **Validación externa** y pruebas rápidas (mezcla correos reales y generados) |
+| **Zenodo: "Phishing validation emails dataset"** (v1, 2024) | Verificado (18 oct): archivo `Phishing_validation_emails.csv` de 203 kB (MD5 `1bf8ec0fe3f67e12dd275ce5b2b91b69`), columnas `Email Text` y `Email Type` (`Safe Email` / `Phishing Email`), licencia CC BY 4.0. Tiene 2.000 filas (1.000 por clase) pero solo **100 textos únicos**, cada uno repetido 20 veces; tras quitar duplicados quedan 100 correos (77 seguros y 23 phishing). <https://zenodo.org/records/13474746> | Origen de los textos (reales o generados); los ejemplos vistos parecen frases cortas tipo plantilla | **Validación externa**, con la salvedad de que 100 correos dan porcentajes con mucho margen de error |
 | MeAJOR Corpus (arXiv 2507.17978) | 135.894 correos tras limpieza, fuentes Nazario, Nigerian Fraud y TREC-05/06/07, 20 columnas | Enlace de descarga y licencia no aparecen en el artículo | Opción de ampliación si el principal resulta pequeño o sesgado |
 
 **Estado actual (17 oct):** se trabaja por ahora con `CEAS_08.csv`, uno de los archivos del dataset de Kaggle. Verificado con el propio archivo: 39.154 filas y 7 columnas (`sender`, `receiver`, `date`, `subject`, `body`, `label`, `urls`); `label` 1 = 21.842 y 0 = 17.312; `urls` 1 = 26.232 y 0 = 12.922. El CEAS 2008 es un corpus de spam contra correo legítimo, así que la clase 1 es "malicioso/no deseado" y no phishing en sentido estricto (por confirmar con las muestras que imprime `scripts/explorar_datos.py`). El informe debe describirlo con ese alcance. El cargador ya admite agregar más fuentes (por ejemplo, Nazario y Nigerian Fraud como clase mala) cuando se descarguen.
@@ -125,6 +128,46 @@ Una sola pantalla: cuadro de texto para pegar el correo, botón "Analizar", y de
 - Probabilidad: MSE y R² como en el anteproyecto. Nota técnica: el MSE entre probabilidad y etiqueta 0/1 es el puntaje de Brier, y el R² resultante mide cuánta varianza de la etiqueta explica la probabilidad. Naive Bayes suele dar probabilidades extremas (cercanas a 0 o 1), así que si salen mal calibradas se prueba `CalibratedClassifierCV` antes de fijar los umbrales.
 - Validación externa: probar el modelo entrenado en el dataset de Zenodo para ver cuánto generaliza.
 
+### Resultados obtenidos (18 oct)
+
+Corrida de `scripts/entrenar.py` sobre `phishing_email.csv` (82.077 correos limpios: 65.661 de entrenamiento y 16.416 de prueba; semilla 42; unos 75 s) y validación externa con `Phishing_validation_emails.csv`. Registros completos en `docs/resultados/`.
+
+| Métrica | Prueba 20 % (n = 16.416) | Externo (n = 100) |
+|---|---|---|
+| Exactitud | 0,9642 | 0,7900 |
+| Precisión | 0,9891 | 0,5250 |
+| Sensibilidad | 0,9419 | 0,9130 |
+| F1 | 0,9649 | 0,6667 |
+| AUC-ROC | 0,9969 | 0,9193 |
+| MSE (Brier) | 0,0271 | 0,1319 |
+| R² de la probabilidad | 0,8914 | 0,2551 |
+| Matriz (VN / FP / FN / VP) | 7.758 / 89 / 498 / 8.071 | 58 / 19 / 2 / 21 |
+| Legítimos en nivel alto | 0,75 % | 12,99 % |
+| Maliciosos en nivel bajo | 3,65 % | 8,70 % |
+
+Lectura:
+
+1. Dentro de su corpus el modelo separa muy bien las clases (AUC 0,997), pero los términos que más pesan son rasgos de las fuentes: hacia legítimo `enron`, `kaminski`, `pythondev`, `opensuse`; hacia malicioso `replica watches`, `rolex`, `custom alert` y enlaces de cnn.com. Aprendió el estilo del corpus más que el contenido del phishing.
+2. Fuera del corpus la precisión baja de 98,9 % a 52,5 %: de 77 correos legítimos, 19 se marcaron como maliciosos. La sensibilidad se mantiene (21 de 23 phishing detectados) y la calibración empeora (R² de 0,89 a 0,26).
+3. Con solo 23 correos de phishing, los porcentajes externos tienen mucho margen de error: indican una tendencia, no una medida precisa.
+4. Aún no se ha probado `--calibrar` ni el ajuste de umbrales.
+
+Pruebas manuales con correos escritos a mano (ilustrativas, no estadísticas; reproducibles con `scripts/probar_ejemplos.py`):
+
+| Correo | P(malicioso) | Observación |
+|---|---|---|
+| Phishing PayPal (inglés) | 0,981 | Detectado |
+| Phishing banco (inglés) | 0,963 | Detectado |
+| Phishing en español | 0,968 | Acierta, pero casi ninguna palabra está en el vocabulario |
+| Legítimo: reunión (inglés) | 0,009 | Correcto |
+| Legítimo: pedido enviado (inglés) | 0,480 | Riesgo medio: falsa alarma |
+| Legítimo: reunión (español) | 0,477 | Riesgo medio: falsa alarma |
+| Legítimo: pedido enviado (español) | 0,928 | Riesgo alto: falsa alarma |
+| Legítimo: extracto bancario (inglés) | 0,647 | Riesgo medio: falsa alarma |
+| Phishing sin palabras típicas (pide un código por SMS) | 0,193 | Riesgo bajo: se le escapa |
+
+Estos resultados motivan las decisiones D7 a D9 y se discuten en la fase de discusión de resultados.
+
 ## 9. Plan hasta el miércoles
 
 | Día | Entregable |
@@ -139,3 +182,22 @@ Una sola pantalla: cuadro de texto para pegar el correo, botón "Analizar", y de
 - Modelo entrenado solo con inglés: en español puede fallar sin avisar. La interfaz debe advertirlo.
 - Bolsa de palabras: no entiende contexto ni suplantaciones sutiles; un ataque bien redactado puede salir como riesgo bajo.
 - Los datasets públicos tienden a ser antiguos; los phishing actuales (incluidos los generados con IA) pueden no estar representados.
+- La clase "maliciosa" de `phishing_email.csv` mezcla spam, estafas y texto sin sentido; el sistema detecta "correo malicioso o no deseado", no phishing en sentido estricto.
+- Trabajo futuro: crear o conseguir un corpus de correos en español y reentrenar; añadir el análisis de enlaces y de cabeceras con datos reales.
+
+## 11. Trazabilidad con el anteproyecto
+
+| Anteproyecto | Componente del repositorio | Estado (18 oct) |
+|---|---|---|
+| Obj. 1, Detección: reconocer rasgos lingüísticos y técnicos (remitente, enlaces, palabras clave, urgencia) | TF-IDF sobre el texto (palabras clave); remitente, enlaces y urgencia mediante reglas del orquestador (D8) | Parcial: solo palabras |
+| Obj. 2, Pronóstico: probabilidad de phishing y modelo que se actualiza con nuevos ejemplos | `ModeloNaiveBayes.predecir`; reentrenamiento (D9) | Parcial: falta la actualización |
+| Obj. 3, Mitigación: alerta según el nivel de riesgo, con acciones recomendadas | `ModuloAlerta` y `AgenteOrquestador` (sección 6) | Pendiente |
+| Resultado: dataset procesado | `ConjuntoDatos` | Hecho |
+| Resultado: modelo entrenado con precisión, sensibilidad y F1 | `scripts/entrenar.py`, `evaluacion.py` | Hecho (además AUC, MSE y R²) |
+| Resultado: mecanismo de alerta y mitigación | `AgenteOrquestador`, `ModuloAlerta`, interfaz Streamlit | Pendiente |
+
+Matices respecto al texto del anteproyecto, que deben declararse en el informe:
+
+1. El anteproyecto habla de correos "de phishing y legítimos"; el dataset de entrenamiento mezcla spam y fraude (sección 3).
+2. Se añaden elementos que el anteproyecto no pedía: explicabilidad (la referencia [1] recomienda IA explicable), validación externa, MSE y R² (sección B.5.1 de la versión final) y la interfaz Streamlit.
+3. La Fig. 1 del anteproyecto dibuja una flecha del modelo al módulo de alerta; en el diseño final todo pasa por el orquestador (sección 4). Hay que corregir la figura en la versión final.

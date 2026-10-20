@@ -42,6 +42,10 @@ class ConfigOrquestador:
     umbral_medio: float = 0.35   # p < 0.35  -> bajo
     umbral_alto: float = 0.70    # p >= 0.70 -> alto
     n_terminos_explicacion: int = 5
+    # Reglas complementarias (reglas.py): cada hallazgo suma puntos (1 débil,
+    # 2 media, 3 fuerte) y el total fija un nivel mínimo, independiente del modelo.
+    puntos_medio: int = 2        # >= 2 puntos -> al menos medio
+    puntos_alto: int = 4         # >= 4 puntos -> alto
 
 
 # Nombres de columnas aceptados en los CSV de entrada (ver data.py).

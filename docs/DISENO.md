@@ -21,9 +21,9 @@ Fuera del alcance (por ahora): integración con un cliente de correo real, anál
 | D4 | Explicar la alerta con los términos que más aportan a la decisión | Cierra la brecha de explicabilidad de la sección II.C sin librerías extra | SHAP/LIME: más pesado para un modelo que ya es lineal |
 | D5 | Umbrales de riesgo configurables en `config.py` | Se calibran con datos reales en evaluación | Umbrales fijos en el código |
 | D6 | Etiquetas internas 0 = legítimo, 1 = malicioso (spam/phishing); el cargador falla si encuentra una etiqueta desconocida | Evita entrenar con etiquetas mal interpretadas sin darse cuenta | Adivinar el mapeo |
-| D7 | Aviso de idioma (por implementar): si el correo no parece inglés, la alerta advierte que el resultado no es fiable | El modelo solo vio inglés; un pedido legítimo en español obtuvo P = 0,93 (riesgo alto) | Mostrar el nivel sin advertencia |
-| D8 | Reglas complementarias en el orquestador (por implementar): enlaces con dominio distinto al del remitente, lenguaje de urgencia y petición de contraseñas o códigos; pueden subir el nivel y se muestran como motivos | El modelo de palabras no ve remitente ni enlaces (el dataset vino sin URLs) y el Obj. 1 del anteproyecto los menciona; un phishing sin palabras típicas obtuvo P = 0,19 | Confiar solo en el modelo |
-| D9 | Reentrenamiento con ejemplos nuevos etiquetados (por implementar) | El Obj. 2 del anteproyecto pide que el modelo "pueda actualizarse al alimentarlo con nuevos ejemplos" | Modelo fijo entrenado una sola vez |
+| D7 | Aviso de idioma (`idioma.py`, `orquestador.py`): si el correo no parece inglés, no se usa la probabilidad del modelo y la alerta lo advierte | El modelo solo vio inglés; un pedido legítimo en español obtuvo P = 0,93 (riesgo alto) | Mostrar el nivel sin advertencia |
+| D8 | Reglas complementarias (`reglas.py`): enlaces (IP, «@», acortadores, marca suplantada, dominio distinto al del remitente), remitente que suplanta una marca, lenguaje de urgencia y petición de contraseñas o códigos, en inglés y español; suman puntos, solo pueden subir el nivel y se muestran como motivos | El modelo de palabras no ve remitente ni enlaces (el dataset vino sin URLs) y el Obj. 1 del anteproyecto los menciona; un phishing sin palabras típicas obtuvo P = 0,19 | Confiar solo en el modelo |
+| D9 | Actualización con ejemplos nuevos etiquetados (`ModeloNaiveBayes.actualizar`, `scripts/actualizar_modelo.py`) mediante `partial_fit`; el vocabulario TF-IDF queda fijo | El Obj. 2 del anteproyecto pide que el modelo "pueda actualizarse al alimentarlo con nuevos ejemplos" | Modelo fijo entrenado una sola vez |
 
 ## 3. Dataset
 
@@ -110,6 +110,14 @@ Nota: el anteproyecto dibuja una flecha "ModeloNaiveBayes → ModuloAlerta (clas
 
 Los umbrales son un punto de partida. En evaluación se ajustan sobre un conjunto de validación, priorizando que los phishing reales no se clasifiquen como bajo (sensibilidad), aceptando algunos falsos positivos.
 
+**Cómo se obtiene el nivel que ve el usuario (`AgenteOrquestador.recibir_correo`):**
+
+1. Se detecta el idioma (`idioma.py`). Si es inglés (o el texto es demasiado corto para saberlo), el modelo calcula P y se obtiene el *nivel del modelo* con la tabla anterior. Si no, no se usa el modelo y la alerta lo advierte.
+2. Las reglas (`reglas.py`) suman puntos: 1 débil, 2 media, 3 fuerte. Con 2 o más puntos el nivel de las reglas es medio; con 4 o más, alto (`ConfigOrquestador.puntos_medio` y `puntos_alto`).
+3. El nivel final es el más grave de los dos. Las reglas solo suben el nivel, nunca lo bajan.
+
+Los puntos de cada regla y los cortes de 2 y 4 son un punto de partida elegido a mano, sin entrenar. Sus efectos se miden en `scripts/evaluar_mecanismo.py`, con dos límites que deben declararse en el informe: (1) el 20 % de prueba de `phishing_email.csv` es independiente de las reglas, pero llegó sin enlaces ni remitente, así que las reglas de enlaces y remitente no pueden dispararse y esa medida no prueba que ayuden; (2) el dataset de Zenodo **no es independiente**: al escribir las reglas de texto se vieron seis de sus filas, y las reglas `premio` y `datos_sensibles` coinciden con ellas, de modo que sus cifras son optimistas. La validación real de las reglas necesita correos con enlaces y remitente que no se hayan visto al escribirlas.
+
 ## 6. Textos de alerta (acciones sugeridas)
 
 - **Alto:** no hacer clic en enlaces, no descargar adjuntos, no responder; verificar al remitente por otro canal; reportar el correo y eliminarlo.
@@ -173,8 +181,8 @@ Estos resultados motivan las decisiones D7 a D9 y se discuten en la fase de disc
 | Día | Entregable |
 |---|---|
 | Sáb–Dom | Diseño aprobado, dataset descargado, cargador y preprocesamiento (B.2, B.3) |
-| Lun | Entrenamiento, evaluación y ajuste de umbrales (B.4, B.5) |
-| Mar | Orquestador, alertas e interfaz Streamlit (B.6) |
+| Dom–Lun | Entrenamiento y validación externa (B.4, B.5), hecho; orquestador, alertas, reglas e idioma, y actualización del modelo (B.6, D7–D9), hecho |
+| Mar | Interfaz Streamlit (B.6), medir el mecanismo con `scripts/evaluar_mecanismo.py` y ajustar umbrales |
 | Mié | Pruebas, README, informe de diseño e implementación |
 
 ## 10. Limitaciones conocidas
@@ -189,12 +197,12 @@ Estos resultados motivan las decisiones D7 a D9 y se discuten en la fase de disc
 
 | Anteproyecto | Componente del repositorio | Estado (18 oct) |
 |---|---|---|
-| Obj. 1, Detección: reconocer rasgos lingüísticos y técnicos (remitente, enlaces, palabras clave, urgencia) | TF-IDF sobre el texto (palabras clave); remitente, enlaces y urgencia mediante reglas del orquestador (D8) | Parcial: solo palabras |
-| Obj. 2, Pronóstico: probabilidad de phishing y modelo que se actualiza con nuevos ejemplos | `ModeloNaiveBayes.predecir`; reentrenamiento (D9) | Parcial: falta la actualización |
-| Obj. 3, Mitigación: alerta según el nivel de riesgo, con acciones recomendadas | `ModuloAlerta` y `AgenteOrquestador` (sección 6) | Pendiente |
+| Obj. 1, Detección: reconocer rasgos lingüísticos y técnicos (remitente, enlaces, palabras clave, urgencia) | TF-IDF sobre el texto (palabras clave); remitente, enlaces y urgencia mediante reglas del orquestador (D8) | Código hecho (D8); falta medir su efecto con `scripts/evaluar_mecanismo.py` |
+| Obj. 2, Pronóstico: probabilidad de phishing y modelo que se actualiza con nuevos ejemplos | `ModeloNaiveBayes.predecir`; reentrenamiento (D9) | Hecho, con el límite del vocabulario fijo |
+| Obj. 3, Mitigación: alerta según el nivel de riesgo, con acciones recomendadas | `ModuloAlerta` y `AgenteOrquestador` (sección 6) | Alerta y orquestador hechos; falta la interfaz |
 | Resultado: dataset procesado | `ConjuntoDatos` | Hecho |
 | Resultado: modelo entrenado con precisión, sensibilidad y F1 | `scripts/entrenar.py`, `evaluacion.py` | Hecho (además AUC, MSE y R²) |
-| Resultado: mecanismo de alerta y mitigación | `AgenteOrquestador`, `ModuloAlerta`, interfaz Streamlit | Pendiente |
+| Resultado: mecanismo de alerta y mitigación | `AgenteOrquestador`, `ModuloAlerta`, interfaz Streamlit | Parcial: falta Streamlit |
 
 Matices respecto al texto del anteproyecto, que deben declararse en el informe:
 

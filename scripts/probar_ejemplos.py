@@ -1,12 +1,16 @@
-"""Prueba el modelo entrenado con correos escritos a mano.
+"""Prueba el mecanismo con correos escritos a mano.
 
 Uso (desde la raíz del proyecto, con el entorno virtual activo y después de
 `python scripts/entrenar.py`):
 
     python scripts/probar_ejemplos.py
 
-Son ejemplos ilustrativos, no una medida estadística: sirven para ver cómo se
-comporta el modelo fuera del corpus con el que se entrenó (docs/DISENO.md, §8).
+Muestra, para cada correo, la probabilidad del modelo, el nivel que daría el
+modelo solo y el nivel final del mecanismo (modelo + reglas + aviso de idioma).
+
+Son ejemplos ilustrativos, NO una medida estadística: las reglas se escribieron
+mirando estos mismos casos, así que acertarlos no demuestra nada. La medida
+honesta está en scripts/evaluar_mecanismo.py (docs/DISENO.md, §8).
 """
 from __future__ import annotations
 
@@ -15,10 +19,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-import joblib  # noqa: E402
-
+from phishing_detector.alerta import NivelRiesgo  # noqa: E402
 from phishing_detector.config import RUTA_MODELO_ENTRENADO  # noqa: E402
-from phishing_detector.evaluacion import nivel_de_riesgo  # noqa: E402
+from phishing_detector.orquestador import AgenteOrquestador  # noqa: E402
 
 # (esperado, descripción, texto). "esperado" solo es la intención del autor.
 CASOS = [
@@ -52,15 +55,25 @@ CASOS = [
 
 
 def main() -> None:
-    if not RUTA_MODELO_ENTRENADO.exists():
-        sys.exit(f"No hay modelo en {RUTA_MODELO_ENTRENADO}. Ejecuta antes: python scripts/entrenar.py")
-    guardado = joblib.load(RUTA_MODELO_ENTRENADO)
-    extractor, modelo = guardado["extractor"], guardado["modelo"]
+    try:
+        agente = AgenteOrquestador.desde_archivo(RUTA_MODELO_ENTRENADO)
+    except FileNotFoundError as e:
+        sys.exit(str(e))
 
-    print(f"{'P(malicioso)':>12}  {'nivel':<6} {'esperado':<10} descripción")
+    print(f"{'P(modelo)':>9}  {'solo modelo':<11} {'mecanismo':<10} {'idioma':<14} {'esperado':<10} descripción")
+    aciertos_modelo = aciertos_mecanismo = 0
     for esperado, descripcion, texto in CASOS:
-        p = float(modelo.predecir(extractor.vectorizar([texto]))[0])
-        print(f"{p:12.3f}  {nivel_de_riesgo(p):<6} {esperado:<10} {descripcion}")
+        p = float(agente.modelo.predecir(agente.extractor.vectorizar([texto]))[0])
+        nivel_modelo = agente.evaluar_riesgo(p)
+        alerta = agente.recibir_correo(texto)
+        # Acierto: un correo malicioso debe salir medio o alto; uno legítimo, bajo.
+        ok = lambda n: (n is not NivelRiesgo.BAJO) if esperado == "malicioso" else (n is NivelRiesgo.BAJO)  # noqa: E731
+        aciertos_modelo += ok(nivel_modelo)
+        aciertos_mecanismo += ok(alerta.nivel)
+        print(f"{p:9.3f}  {nivel_modelo.value:<11} {alerta.nivel.value:<10} {alerta.idioma:<14} "
+              f"{esperado:<10} {descripcion}")
+    print(f"\nAciertos sobre {len(CASOS)} casos: solo modelo {aciertos_modelo}, mecanismo {aciertos_mecanismo} "
+          "(ilustrativo: las reglas se escribieron viendo estos casos).")
 
 
 if __name__ == "__main__":

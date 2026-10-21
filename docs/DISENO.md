@@ -199,10 +199,10 @@ Estos resultados motivan las decisiones D7 a D9 y se discuten en la fase de disc
 |---|---|---|
 | Obj. 1, Detección: reconocer rasgos lingüísticos y técnicos (remitente, enlaces, palabras clave, urgencia) | TF-IDF sobre el texto (palabras clave); remitente, enlaces y urgencia mediante reglas del orquestador (D8) | Código hecho (D8); falta medir su efecto con `scripts/evaluar_mecanismo.py` |
 | Obj. 2, Pronóstico: probabilidad de phishing y modelo que se actualiza con nuevos ejemplos | `ModeloNaiveBayes.predecir`; reentrenamiento (D9) | Hecho, con el límite del vocabulario fijo |
-| Obj. 3, Mitigación: alerta según el nivel de riesgo, con acciones recomendadas | `ModuloAlerta` y `AgenteOrquestador` (sección 6) | Alerta y orquestador hechos; falta la interfaz |
+| Obj. 3, Mitigación: alerta según el nivel de riesgo, con acciones recomendadas | `ModuloAlerta` y `AgenteOrquestador` (sección 6) | Alerta, orquestador e interfaz Streamlit (`app/app.py`) hechos |
 | Resultado: dataset procesado | `ConjuntoDatos` | Hecho |
 | Resultado: modelo entrenado con precisión, sensibilidad y F1 | `scripts/entrenar.py`, `evaluacion.py` | Hecho (además AUC, MSE y R²) |
-| Resultado: mecanismo de alerta y mitigación | `AgenteOrquestador`, `ModuloAlerta`, interfaz Streamlit | Parcial: falta Streamlit |
+| Resultado: mecanismo de alerta y mitigación | `AgenteOrquestador`, `ModuloAlerta`, interfaz Streamlit | Hecho |
 
 Matices respecto al texto del anteproyecto, que deben declararse en el informe:
 

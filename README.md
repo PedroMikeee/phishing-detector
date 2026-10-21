@@ -12,7 +12,7 @@ Mecanismo inteligente para detectar, pronosticar y mitigar ataques de phishing e
 | Detección de idioma y reglas de riesgo: enlaces, remitente, urgencia, datos sensibles (D7, D8) | Hecho; falta medirlo con datos reales |
 | `AgenteOrquestador` y `ModuloAlerta` (B.6) | Hecho |
 | Actualización del modelo con ejemplos nuevos (D9) | Hecho (el vocabulario queda fijo) |
-| Interfaz Streamlit (B.6) | Pendiente |
+| Interfaz Streamlit (B.6) | Hecho (`app/app.py`) |
 
 Trazabilidad con el anteproyecto y decisiones pendientes: `docs/DISENO.md`, secciones 2 y 11.
 
@@ -23,6 +23,7 @@ data/raw/                CSV descargados (no se suben a git)
 data/processed/          salidas intermedias generadas por el código (no se suben)
 models/                  modelo entrenado (se regenera con scripts/entrenar.py)
 src/phishing_detector/   código del mecanismo (una clase por archivo, ver docs/DISENO.md §4)
+app/                     interfaz Streamlit (una pantalla)
 scripts/                 exploración (B.2), entrenamiento y evaluación (B.4, B.5), análisis y actualización
 tests/                   pruebas con datos sintéticos
 docs/DISENO.md           diseño, decisiones, resultados y limitaciones
@@ -30,7 +31,6 @@ docs/figuras/            figuras generadas por los scripts
 docs/resultados/         registros y métricas de cada corrida
 ```
 
-La carpeta `app/` (interfaz Streamlit) se creará en la fase de despliegue.
 
 ## Puesta en marcha
 
@@ -63,6 +63,7 @@ python scripts/probar_ejemplos.py              # modelo solo vs. mecanismo en co
 python scripts/evaluar_mecanismo.py            # mide si las reglas y el aviso de idioma mejoran al modelo solo
 python scripts/analizar_correo.py --texto "..."  # alerta completa de un correo (o un archivo, o por stdin)
 python scripts/actualizar_modelo.py data/raw/correos_nuevos.csv   # incorpora ejemplos etiquetados (D9)
+streamlit run app/app.py                       # interfaz: pega un correo y ve el nivel de riesgo
 ```
 
 ## Resultados iniciales

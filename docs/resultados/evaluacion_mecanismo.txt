@@ -1,0 +1,38 @@
+
+=== Prueba 20 % de phishing_email.csv (sin filtro de idioma) (n = 16,416; sin usar el modelo por idioma: 0) ===
+  Alerta con nivel medio o alto:
+                            solo modelo    mecanismo
+    sensibilidad                 96.3 %       96.4 %
+    precisión                    98.4 %       98.0 %
+    falsas alarmas                1.7 %        2.1 %
+  Alerta con solo nivel alto:
+                            solo modelo    mecanismo
+    sensibilidad                 89.2 %       89.2 %
+    precisión                    99.2 %       99.2 %
+    falsas alarmas                0.8 %        0.8 %
+  Reparto por nivel (% de cada clase real):
+    solo_modelo   legitimo: bajo  98.27%  medio   0.98%  alto   0.75%
+    solo_modelo  malicioso: bajo   3.65%  medio   7.12%  alto  89.23%
+    mecanismo     legitimo: bajo  97.88%  medio   1.36%  alto   0.75%
+    mecanismo    malicioso: bajo   3.56%  medio   7.21%  alto  89.23%
+  Nota: con el filtro de idioma activo se habrían descartado 16,302 de 16,416 correos; este corpus no tiene palabras vacías y el detector no es aplicable.
+
+=== Validación externa: Phishing_validation_emails.csv (n = 100; sin usar el modelo por idioma: 0) ===
+  Alerta con nivel medio o alto:
+                            solo modelo    mecanismo
+    sensibilidad                 91.3 %       91.3 %
+    precisión                    46.7 %       46.7 %
+    falsas alarmas               31.2 %       31.2 %
+  Alerta con solo nivel alto:
+                            solo modelo    mecanismo
+    sensibilidad                 82.6 %       82.6 %
+    precisión                    65.5 %       65.5 %
+    falsas alarmas               13.0 %       13.0 %
+  Reparto por nivel (% de cada clase real):
+    solo_modelo   legitimo: bajo  68.83%  medio  18.18%  alto  12.99%
+    solo_modelo  malicioso: bajo    8.7%  medio    8.7%  alto  82.61%
+    mecanismo     legitimo: bajo  68.83%  medio  18.18%  alto  12.99%
+    mecanismo    malicioso: bajo    8.7%  medio    8.7%  alto  82.61%
+
+Resultados guardados en /home/tash/Universidad/MSInfo/Anteproyecto/Proyecto/phishing-detector/docs/resultados/evaluacion_mecanismo.json (45 s)
+

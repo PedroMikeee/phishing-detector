@@ -42,7 +42,7 @@ Criterios: texto de correo etiquetado como phishing/legítimo, descarga gratuita
 1. La clase 1 mezcla spam, "ensaladas de palabras" y estafas tipo *dear friend*; no es phishing en sentido estricto. El informe debe llamarla "correo malicioso o no deseado".
 2. El texto ya viene preprocesado (minúsculas, sin puntuación, sin enlaces, correos mutilados como `pjaxqpythonorg`). Consecuencia: el token `urltoken` nunca aparece en el entrenamiento y el modelo no aprende nada de los enlaces. Si se quiere usar esa señal en la demo, hay que añadirla como regla del orquestador (por ejemplo, subir un nivel de riesgo si el correo trae enlaces a dominios que no coinciden con el remitente) y documentarlo como decisión aparte.
 3. Se ven rasgos de la fuente (los legítimos parecen listas de correo con `wrote`, `list`, `pgp`; términos de fecha como `aug` y `wed` aparecen en ambas clases). `scripts/entrenar.py` imprime los términos más discriminantes para auditar esto.
-4. Las muestras que imprime `scripts/explorar_datos.py` no contienen palabras vacías («the», «and», «to», «i»): el corpus parece traerlas ya eliminadas (el conteo exacto se verifica con el comando del paso 9 de la sesión de trabajo). Es otra diferencia entre el corpus y un correo real, y rompe el detector de idioma (`idioma.py`), que se apoya en esas palabras: sobre el 20 % de prueba concluyó «no es inglés» en el 99,3 % de los correos (16.302 de 16.416) y apagó el modelo, hundiendo la sensibilidad del mecanismo a 2,3 %. No era un fallo del modelo sino un detector aplicado fuera de su alcance; por eso `scripts/evaluar_mecanismo.py` evalúa ese corpus con `ConfigOrquestador(verificar_idioma=False)` y mantiene el filtro en el dataset externo.
+4. Las muestras que imprime `scripts/explorar_datos.py` no contienen palabras vacías («the», «and», «to», «i»): el corpus parece traerlas ya eliminadas (verificado el 20 oct en una muestra de 5.000 correos: «the», «and», «to», «of» y «you» aparecen en el 0,0 % de ellos). Es otra diferencia entre el corpus y un correo real, y rompe el detector de idioma (`idioma.py`), que se apoya en esas palabras: sobre el 20 % de prueba concluyó «no es inglés» en el 99,3 % de los correos (16.302 de 16.416) y apagó el modelo, hundiendo la sensibilidad del mecanismo a 2,3 %. No era un fallo del modelo sino un detector aplicado fuera de su alcance; por eso `scripts/evaluar_mecanismo.py` evalúa ese corpus con `ConfigOrquestador(verificar_idioma=False)` y mantiene el filtro en el dataset externo.
 
 Riesgo conocido: los corpus antiguos tienen artefactos propios de cada fuente (formato, cabeceras, época), y un modelo puede aprender esos rasgos en lugar del contenido malicioso, dando métricas altísimas que no se sostienen en correos nuevos. Por eso la validación externa con el dataset de Zenodo es parte del plan y no un extra.
 
@@ -177,6 +177,25 @@ Pruebas manuales con correos escritos a mano (ilustrativas, no estadísticas; re
 
 Estos resultados motivan las decisiones D7 a D9 y se discuten en la fase de discusión de resultados.
 
+### Evaluación del mecanismo completo (20 oct)
+
+`scripts/evaluar_mecanismo.py` compara el modelo solo con el mecanismo (modelo + reglas + aviso de idioma), con el criterio «se alerta si el nivel es medio o alto». El 20 % de prueba se evalúa sin el filtro de idioma (el corpus no tiene palabras vacías; con el filtro se habrían descartado 16.302 de 16.416 correos). Registro completo en `docs/resultados/evaluacion_mecanismo.*`.
+
+| Con alerta en nivel medio o alto | Prueba 20 %: solo modelo | Prueba 20 %: mecanismo | Externo (n = 100): solo modelo | Externo: mecanismo |
+|---|---|---|---|---|
+| Sensibilidad | 96,3 % | 96,4 % | 91,3 % | 91,3 % |
+| Precisión | 98,4 % | 98,0 % | 46,7 % | 46,7 % |
+| Falsas alarmas | 1,7 % | 2,1 % | 31,2 % | 31,2 % |
+
+(La precisión externa de 52,5 % de la tabla anterior usa el corte de 0,5; aquí es 46,7 % porque el criterio incluye el nivel medio.)
+
+Lectura:
+
+1. **Las reglas no mejoran de forma medible.** En el 20 % de prueba la sensibilidad sube 0,1 puntos y las falsas alarmas suben 0,4 puntos; con el criterio «solo nivel alto» no cambia nada. En el dataset externo no cambian ningún nivel.
+2. **La medida no puede ni confirmar ni descartar su utilidad.** Las reglas actúan sobre enlaces y remitente, y ninguno de los dos conjuntos los tiene (el corpus los eliminó; el externo son frases cortas). Lo que sí se observa es el costo: algunas falsas alarmas más por las reglas de texto.
+3. **El filtro de idioma no se pudo medir en el corpus de entrenamiento.** En las pruebas manuales evita las falsas alarmas en español (2 casos, ilustrativo).
+4. **El problema de fondo no cambia:** el mecanismo no mejora la generalización del modelo (precisión externa por debajo de 50 %).
+
 ## 9. Plan hasta el miércoles
 
 | Día | Entregable |
@@ -198,7 +217,7 @@ Estos resultados motivan las decisiones D7 a D9 y se discuten en la fase de disc
 
 | Anteproyecto | Componente del repositorio | Estado (18 oct) |
 |---|---|---|
-| Obj. 1, Detección: reconocer rasgos lingüísticos y técnicos (remitente, enlaces, palabras clave, urgencia) | TF-IDF sobre el texto (palabras clave); remitente, enlaces y urgencia mediante reglas del orquestador (D8) | Código hecho (D8); falta medir su efecto con `scripts/evaluar_mecanismo.py` |
+| Obj. 1, Detección: reconocer rasgos lingüísticos y técnicos (remitente, enlaces, palabras clave, urgencia) | TF-IDF sobre el texto (palabras clave); remitente, enlaces y urgencia mediante reglas del orquestador (D8) | Hecho (D8); medido sin efecto apreciable porque los conjuntos de evaluación no tienen enlaces ni remitente (sección 8) |
 | Obj. 2, Pronóstico: probabilidad de phishing y modelo que se actualiza con nuevos ejemplos | `ModeloNaiveBayes.predecir`; reentrenamiento (D9) | Hecho, con el límite del vocabulario fijo |
 | Obj. 3, Mitigación: alerta según el nivel de riesgo, con acciones recomendadas | `ModuloAlerta` y `AgenteOrquestador` (sección 6) | Alerta, orquestador e interfaz Streamlit (`app/app.py`) hechos |
 | Resultado: dataset procesado | `ConjuntoDatos` | Hecho |

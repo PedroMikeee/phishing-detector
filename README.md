@@ -82,4 +82,5 @@ El modelo separa muy bien el corpus donde se entrenó, pero fuera de él alarma 
 - Entrenado solo con inglés. En otro idioma el mecanismo no usa la probabilidad del modelo y lo avisa; solo quedan las reglas.
 - El modelo es de bolsa de palabras: no ve remitente ni enlaces (el dataset vino sin URLs) ni entiende contexto. Esa parte la cubren las reglas, que son heurísticas sin entrenar.
 - La actualización con ejemplos nuevos no amplía el vocabulario: las palabras nuevas se ignoran hasta reentrenar.
+- El corpus de entrenamiento no tiene palabras vacías, puntuación ni enlaces, así que no se parece a un correo real; la detección de idioma solo es aplicable a correos normales.
 - Los datasets públicos son antiguos y no representan el phishing actual.

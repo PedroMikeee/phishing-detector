@@ -12,7 +12,7 @@ from phishing_detector.alerta import (  # noqa: E402
     ACCIONES, MENSAJE_BAJO_SIN_MODELO, MENSAJES, ModuloAlerta, NivelRiesgo, nivel_maximo,
 )
 from phishing_detector.caracteristicas import ExtractorCaracteristicas  # noqa: E402
-from phishing_detector.config import ConfigModelo  # noqa: E402
+from phishing_detector.config import ConfigModelo, ConfigOrquestador  # noqa: E402
 from phishing_detector.correo import CorreoElectronico  # noqa: E402
 from phishing_detector.modelo import ModeloNaiveBayes  # noqa: E402
 from phishing_detector.orquestador import AgenteOrquestador  # noqa: E402
@@ -54,6 +54,17 @@ def entrenado():
 def agente(entrenado):
     ex, modelo = entrenado
     return AgenteOrquestador(ex, modelo)
+
+
+def test_sin_verificar_idioma_se_usa_el_modelo_aunque_no_parezca_ingles(entrenado):
+    """Para corpus sin palabras vacías (ver evaluar_mecanismo.py) el filtro de idioma se apaga."""
+    ex, modelo = entrenado
+    texto = "verify account password login bank prize winner click offer urgent verify account bank"
+    normal = AgenteOrquestador(ex, modelo).recibir_correo(texto)
+    sin_filtro = AgenteOrquestador(ex, modelo, cfg=ConfigOrquestador(verificar_idioma=False)).recibir_correo(texto)
+    assert normal.probabilidad is None and normal.advertencias          # sin palabras vacías: "otro idioma"
+    assert sin_filtro.probabilidad is not None and not sin_filtro.advertencias
+    assert sin_filtro.nivel is NivelRiesgo.ALTO
 
 
 # --------------------------------------------------------------------------- alerta

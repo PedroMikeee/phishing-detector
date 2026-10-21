@@ -46,6 +46,10 @@ class ConfigOrquestador:
     # 2 media, 3 fuerte) y el total fija un nivel mínimo, independiente del modelo.
     puntos_medio: int = 2        # >= 2 puntos -> al menos medio
     puntos_alto: int = 4         # >= 4 puntos -> alto
+    # Si es True (uso normal), un correo que no parece inglés no pasa por el modelo
+    # (D7). Solo se desactiva para evaluar sobre un corpus sin palabras vacías, donde
+    # el detector de idioma no es aplicable (ver scripts/evaluar_mecanismo.py).
+    verificar_idioma: bool = True
 
 
 # Nombres de columnas aceptados en los CSV de entrada (ver data.py).

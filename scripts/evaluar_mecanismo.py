@@ -15,6 +15,11 @@ Para cada sistema se mide el comportamiento con dos criterios de alerta:
 "nivel medio o alto" y "solo alto".
 
 Cómo leer los resultados (limitaciones de la medida):
+  - El corpus de entrenamiento tiene las palabras vacías ("the", "and"...) ya eliminadas,
+    y el detector de idioma se apoya justo en ellas: ahí concluiría "no es inglés" casi
+    siempre y apagaría el modelo. Por eso el 20 % de prueba se evalúa SIN el filtro de
+    idioma (y se imprime cuántos correos habría descartado). El filtro sí se mantiene
+    en el dataset externo, que tiene frases normales.
   - El 20 % de prueba es independiente de las reglas, pero llegó preprocesado
     (sin enlaces ni remitente), así que las reglas de enlaces y remitente no
     pueden dispararse ahí: mide sobre todo si las reglas de texto añaden falsas
@@ -30,6 +35,7 @@ import argparse
 import json
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -37,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from phishing_detector.alerta import NivelRiesgo  # noqa: E402
 from phishing_detector.config import RAIZ, RUTA_DATOS_CRUDOS, RUTA_MODELO_ENTRENADO  # noqa: E402
 from phishing_detector.data import ConjuntoDatos  # noqa: E402
+from phishing_detector.idioma import detectar_idioma, modelo_aplicable  # noqa: E402
 from phishing_detector.orquestador import AgenteOrquestador  # noqa: E402
 
 CRITERIOS = {"nivel medio o alto": 1, "solo nivel alto": 2}
@@ -115,8 +122,14 @@ def main() -> None:
     ruta_ent = Path(args.entrenamiento)
     if ruta_ent.exists():
         _, X_te, _, y_te = ConjuntoDatos(ruta_ent).dividir_train_test(agente.modelo.cfg)
-        resultados["prueba_20pct"] = evaluar(agente, X_te, [int(v) for v in y_te])
-        imprimir(f"Prueba 20 % de {ruta_ent.name}", resultados["prueba_20pct"])
+        descartados = sum(not modelo_aplicable(detectar_idioma(t)) for t in X_te)
+        agente_sin_idioma = AgenteOrquestador(
+            agente.extractor, agente.modelo, cfg=replace(agente.cfg, verificar_idioma=False))
+        resultados["prueba_20pct"] = evaluar(agente_sin_idioma, X_te, [int(v) for v in y_te])
+        resultados["prueba_20pct"]["descartados_por_idioma_si_se_aplicara"] = descartados
+        imprimir(f"Prueba 20 % de {ruta_ent.name} (sin filtro de idioma)", resultados["prueba_20pct"])
+        print(f"  Nota: con el filtro de idioma activo se habrían descartado {descartados:,} de {len(X_te):,} "
+              "correos; este corpus no tiene palabras vacías y el detector no es aplicable.")
     else:
         print(f"(No se evalúa el 20 % de prueba: no existe {ruta_ent})")
 

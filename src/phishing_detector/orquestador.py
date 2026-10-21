@@ -101,7 +101,7 @@ class AgenteOrquestador:
         nivel_reglas = self._nivel_por_puntos(puntos)
         advertencias: list[str] = []
 
-        if _idioma.modelo_aplicable(idioma):
+        if not self.cfg.verificar_idioma or _idioma.modelo_aplicable(idioma):
             x = self.extractor.vectorizar([contenido])
             probabilidad = float(self.modelo.predecir(x)[0])
             terminos = self.modelo.terminos_influyentes(
